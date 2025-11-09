@@ -10,7 +10,7 @@ export type Resource = {
   ownerName: string;
   name: string;
   description: string;
-  dailyRate: number;
+  Rate: number;
   imageUrl: string;
   status: 'active' | 'paused';
 };

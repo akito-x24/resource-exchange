@@ -1,97 +1,119 @@
-// // 'use client';
-// // import { useAppStore } from '@/store/useAppStore';
-// // import Link from 'next/link';                                                -- THIS IS NOT IN NEW CODE BELOW 
+'use client';
 
-// // export default function MyResourcesPage() {
-// //   const me = useAppStore(s => s.me);
-// //   const resources = useAppStore(s => s.resources.filter(r => r.ownerId === me.id));
+import { useEffect, useState } from 'react';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { LendResourceModal } from '@/components/LendResourceModal';
 
-// //   return (
-// //     <div>
-// //       <h1 className="mb-4 text-2xl font-bold">My Resources</h1>
-// //       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-// //         {resources.map(r => (
-// //           <div key={r.id} className="rounded-xl border bg-white">
-// //             <img src={r.imageUrl} className="h-40 w-full rounded-t-xl object-cover" alt="" />
-// //             <div className="p-4">
-// //               <div className="font-semibold">{r.name}</div>
-// //               <div className="text-sm text-gray-600">{r.dailyRate} credits/day</div>
-// //               <div className="mt-3">
-// //                 <Link className="text-blue-600 underline" href={`/resource/${r.id}`}>View</Link>
-// //               </div>
-// //             </div>
-// //           </div>
-// //         ))}
-// //         {resources.length === 0 && <div className="rounded-md border bg-white p-6 text-gray-600">No resources yet. Use the “Lend Something” button.</div>}
-// //       </div>
-// //     </div>
-// //   );
-// // }
+export default function MyResourcesPage() {
+  const supabase = createSupabaseBrowserClient();
+  const [resources, setResources] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setUser(user);
 
-// 'use client';
-// import { useAppStore } from '@/store/useAppStore';
+        if (!user) {
+          setLoading(false);
+          return;
+        }
 
-// export default function MyResourcesPage() {
-//   const me = useAppStore((s) => s.me);
-//   const resources = useAppStore((s) => s.resources);
+        const { data, error } = await supabase
+          .from('resources')
+          .select('id, name, description, daily_rate_credits, main_image_url')
+          .eq('owner_id', user.id)
+          .order('created_at', { ascending: false });
 
-//   const myResources = resources.filter((r) => r.ownerId === me.id);
+        if (error) console.error('Error fetching resources:', error);
+        setResources(data ?? []);
+      } catch (err) {
+        console.error('Error loading resources:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [open]); // Refresh when new item added
 
-//   return (
-//     <div>
-//       <h1 className="mb-4 text-2xl font-bold">My Resources</h1>
-//       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-//         {myResources.map((r) => (
-//           <a key={r.id} href={`/resource/${r.id}`} className="rounded-2xl border bg-white">
-//             <img src={r.imageUrl} className="h-40 w-full rounded-t-2xl object-cover" alt="" />
-//             <div className="p-4">
-//               <div className="font-semibold">{r.name}</div>
-//               <div className="text-sm text-slate-600">{r.dailyRate} credits/day</div>
-//             </div>
-//           </a>
-//         ))}
-//         {myResources.length === 0 && (
-//           <div className="rounded-xl border bg-white p-6 text-slate-600">
-//             No resources yet. Use “Lend Something”.
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
-
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
-export default async function MyResourcesPage() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div className="rounded-xl border bg-white p-6">Please log in.</div>;
-
-  const { data } = await supabase
-    .from('resources')
-    .select('id, name, daily_rate_credits, main_image_url')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false });
-
-  return (
-    <div>
-      <h1 className="mb-4 text-2xl font-bold">My Resources</h1>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {(data ?? []).map((r) => (
-          <a key={r.id} href={`/resource/${r.id}`} className="rounded-2xl border bg-white">
-            <img src={r.main_image_url ?? ''} className="h-40 w-full rounded-t-2xl object-cover" alt="" />
-            <div className="p-4">
-              <div className="font-semibold">{r.name}</div>
-              <div className="text-sm text-slate-600">{r.daily_rate_credits} credits/day</div>
-            </div>
-          </a>
-        ))}
-        {(data ?? []).length === 0 && (
-          <div className="rounded-xl border bg-white p-6 text-slate-600">No resources yet. Use “Lend Something”.</div>
-        )}
+  // 🧠 1️⃣ Handle "not logged in" before "loading"
+  if (!loading && !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] bg-slate-50 px-6">
+        <div className="max-w-md w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">
+            Please log in
+          </h2>
+          <p className="text-slate-600 text-sm">
+            You need to be signed in to manage your resources.
+          </p>
+        </div>
       </div>
+    );
+  }
+
+  // 🧠 2️⃣ Show loading state only while fetching (and user exists)
+  if (loading) {
+    return (
+      <div className="mx-4 px-8 py-10">
+        <span className="text-3xl font-extrabold mb-6">Your Items</span>
+        <div className="text-slate-600 pt-8">Loading your resources...</div>
+      </div>
+    );
+  }
+
+  // 🧠 3️⃣ Actual content
+  return (
+    <div className="mx-4 px-8 py-10">
+      <span className="text-3xl font-extrabold mb-6 block">Your Items</span>
+
+      {resources.length === 0 ? (
+        <div className="text-slate-600 pt-8">
+          No resources yet. Use <strong>“Lend Something”</strong> to share your items.
+        </div>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 transition-all animate-fadeIn">
+          {resources.map((r) => (
+            <div
+              key={r.id}
+              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition"
+            >
+              {r.main_image_url ? (
+                <img
+                  src={r.main_image_url}
+                  alt={r.name}
+                  className="h-40 w-full object-cover rounded-lg mb-3"
+                />
+              ) : (
+                <div className="h-40 w-full flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg mb-3">
+                  No Image
+                </div>
+              )}
+              <h3 className="font-semibold text-slate-800">{r.name}</h3>
+              <p className="text-sm text-slate-600 mt-1 line-clamp-2">
+                {r.description}
+              </p>
+              <p className="text-sm text-blue-600 font-medium mt-2">
+                {r.daily_rate_credits} credits
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Floating Lend Button */}
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed bottom-6 right-6 flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-3 shadow-2xl hover:bg-blue-700 transition"
+      >
+        + Lend Something
+      </button>
+
+      <LendResourceModal open={open} onOpenChange={setOpen} />
     </div>
   );
 }

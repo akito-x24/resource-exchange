@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { signInAction } from '@/app/actions/auth';
+import { signUpAction } from '@/app/actions/auth';
 
-export default function LoginPage({
+export default function SignupPage({
   searchParams,
 }: {
   searchParams?: { error?: string };
@@ -12,19 +12,19 @@ export default function LoginPage({
 
   return (
     <div className="mx-auto mt-35 max-w-sm">
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-center text-3xl font-bold">Welcome Back</h1>
+      <div className="rounded-2xl  bg-white p-10 shadow-sm">
+        <h1 className="mb-1 text-3xl text-center font-bold">Create Account</h1>
         <p className="mb-6 text-center text-sm text-slate-600">
-          Login to access your account.
+          Join our service now!
         </p>
 
         {err && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <div className="mb-4 rounded-md bg-red-50 p-5 text-sm text-red-700">
             Error: {err}
-          </div>
+          </div> 
         )}
 
-        <form action={signInAction} className="space-y-5">
+        <form action={signUpAction} className="space-y-5">
           <input
             name="email"
             type="email"
@@ -37,20 +37,20 @@ export default function LoginPage({
             type="password"
             required
             className="w-full rounded-lg border px-5 py-5"
-            placeholder="Password"
+            placeholder="Password (min 6 chars)"
           />
-          <button className="w-full rounded-full bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-            Login
+          <button className="w-full rounded-xl bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+            Sign Up
           </button>
         </form>
 
         <p className="mt-4 text-sm text-slate-600">
-          New here?{' '}
+          Already have an account?{' '}
           <Link
-            href="/signup"
+            href="/login"
             className="text-blue-600 hover:underline"
           >
-            Create an account
+            Log in
           </Link>
         </p>
       </div>

@@ -1,8 +1,13 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
-export async function createSupabaseServerClient() {
-  const cookieStore = await cookies(); // Next 15 types expect await
+/**
+ * Works with both sync & async cookies() / headers() (Next.js 14 → 15)
+ * No TS errors with Supabase SSR types.
+ */
+export async function createSupabaseServerClient(customHeaders?: HeadersInit) {
+  const cookieStore = await Promise.resolve(cookies());
+  const headerStore = await Promise.resolve(customHeaders || headers());
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,19 +17,18 @@ export async function createSupabaseServerClient() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
-          // RSC is read-only for cookies; only Server Actions can set.
+        set(name: string, value: string, options?: any) {
           try {
             cookieStore.set({ name, value, ...options });
           } catch {
-            // ignore in Server Components; allowed in Server Actions/Routes
+            // ignored for read-only RSC contexts
           }
         },
-        remove(name: string, options: any) {
+        remove(name: string, options?: any) {
           try {
             cookieStore.set({ name, value: '', ...options });
           } catch {
-            // ignore in RSC
+            // ignored for read-only RSC contexts
           }
         },
       },
